@@ -1,0 +1,11 @@
+tags:
+  - name: Kelompok 4 - Binar Academy Gelombang 14
+get:
+  description: Dokumentasi API Sentiment Analysist dengan Model LSTM dan Neural Network
+responses:
+    '200':
+      description: Successful response
+    '400':
+      description: Bad Request
+    '500':
+      description: Internal Server Error
