@@ -97,22 +97,22 @@ def cleansing(text):
 ##################################################################################
 # Load the model and vectorizer nn
 
-with open('model_of_nn/model_nn.pkl', 'rb') as f:
+with open('data/model_nn.pkl', 'rb') as f:
     model_nn = pickle.load(f)
 
-with open('resource_of_nn/vectorizer.pkl', 'rb') as g:
+with open('data/vectorizer.pkl', 'rb') as g:
     count_vect_nn = pickle.load(g)
 
 #memanggil file model dan file LSTM 
 
-file_lstm = open('resource_of_lstm/x_pad_sequences.pickle','rb')
+file_lstm = open('data/x_pad_sequences.pickle','rb')
 feature_file_from_lstm = pickle.load(file_lstm)
 file_lstm.close()
 
-file_tokenizer_lstm = open('resource_of_lstm/tokenizer.pickle', 'rb')
+file_tokenizer_lstm = open('data/tokenizer.pickle', 'rb')
 load_tokenizer_lstm = pickle.load(file_tokenizer_lstm)
 
-model_file_from_lstm = load_model('model_of_lstm/model.h5')
+model_file_from_lstm = load_model('data/model_lstm.h5')
 ##################################################################################
 
 #endpoint
@@ -127,6 +127,7 @@ def hello_world():
     response_data = jsonify(json_response)
     return response_data
 
+
 ##################################################################################
 # Endpoint NN teks
 @swag_from('docs/nn_text.yml',methods=['POST'])
@@ -135,10 +136,10 @@ def nn_text():
     
     string = str(request.form["text"])
     
-    with open('model_of_nn/model_nn.pkl', 'rb') as f: 
+    with open('data/model_nn.pkl', 'rb') as f: 
         model_nn = pickle.load(f)
 
-    with open('resource_of_nn/vectorizer.pkl', 'rb') as g: 
+    with open('datavectorizer.pkl', 'rb') as g: 
         count_vect_nn = pickle.load(g)
     string = cleansing(string)
     text = count_vect_nn.transform([string])
@@ -163,29 +164,43 @@ def nn_text():
 @app.route('/nn_file',methods=['POST'])
 def nn_file():
     try:
-        # Get the uploaded CSV file from the request
         file = request.files["upload_file"]
         
-        # Read the CSV file into a DataFrame
         df = pd.read_csv(file, encoding="latin-1")
         
-        # Rename the column if needed
         df = df.rename(columns={df.columns[0]: 'text'})
         
-        # Apply text cleansing to each row
         df['text_clean'] = df.apply(lambda row: cleansing(row['text']), axis=1)
 
         result = []
 
         for index, row in df.iterrows():
-            # Transform the text using the vectorizer
             text = count_vect_nn.transform([row['text_clean']])
             
-            # Make prediction using the neural network model
             prediction = model_nn.predict(text)[0]
             result.append(prediction)
 
         original = df.text_clean.to_list()
+
+        conn = sqlite3.connect('prediksi_nn.db')
+        cursor = conn.cursor()
+
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS tabel_prediksi (
+                text TEXT,
+                text_clean TEXT,
+                result INTEGER
+            )
+        ''')
+    
+        for index, row in df.iterrows():
+            cursor.execute('''
+                INSERT INTO tabel_prediksi (text, text_clean, result)
+                VALUES (?, ?, ?)
+            ''', (row['text'], row['text_clean'], result[index]))
+
+        conn.commit()
+        conn.close()
 
         # Prepare JSON response for the entire CSV file
         json_response = {
@@ -196,9 +211,11 @@ def nn_file():
                 'sentiment': result
             },
         }
+
+               
         response_data = jsonify(json_response)
         return response_data
-
+    
     except Exception as e:
         error_response = {
             'status_code': 500,
@@ -210,9 +227,10 @@ def nn_file():
 
 ##################################################################################
 # Endpoint LSTM teks
+
 @swag_from('docs/LSTM_text.yml',methods=['POST'])
 @app.route('/LSTM_text',methods=['POST'])
-def lstm_text(model=model_file_from_lstm):  
+def lstm_text():  
     
     original_text = request.form.get('text')
     text = [cleansing(original_text)]
@@ -255,6 +273,26 @@ def lstm_file():
         result.append(get_sentiment)
 
     original = df.text_clean.to_list()
+
+    conn = sqlite3.connect('prediksi_lstm.db')
+    cursor = conn.cursor()
+
+    cursor.execute('''
+            CREATE TABLE IF NOT EXISTS tabel_prediksi (
+                text TEXT,
+                text_clean TEXT,
+                result INTEGER
+            )
+        ''')
+    
+    for index, row in df.iterrows():
+        cursor.execute('''
+                INSERT INTO tabel_prediksi (text, text_clean, result)
+                VALUES (?, ?, ?)
+            ''', (row['text'], row['text_clean'], result[index]))
+
+    conn.commit()
+    conn.close()
 
     json_response = {
         'status_code' : 200,
