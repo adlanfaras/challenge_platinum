@@ -1,5 +1,5 @@
 tags:
-  - name: Sentiment Analysis Using CNN
+  - name: Sentiment Analysis Using NN
 get:
   description: File yang akan diproses
 parameters:
