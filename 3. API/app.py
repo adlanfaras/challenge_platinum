@@ -63,7 +63,8 @@ def data_cleaning (text):
     clean6 = re.sub ('x[a-z0-9]{2}', ' ', clean5)
     clean7 = re.sub ("\d+", ' ', clean6)
     clean8 = re.sub ('  +', '', clean7)
-    return clean8
+    clean9 = re.sub ('user', ' ', clean8)
+    return clean9
 
 def case_folding (text):
     return text.lower()
@@ -192,11 +193,11 @@ def nn_file():
 
     json_response = {
         'status_code' : 200,
-        'description' : "Result of Sentiment Analysis using LSTM",
+        'description' : 'File lengkap telah disimpan dalam folder output.',
         'data' : {
             'text' : original[:3],
             'sentiment' : result[:3],
-            'keterangan' : 'File lengkap telah disimpan dalam folder output.'
+            'keterangan' : "Hasil dari Sentiment Analysis menggunakan NN"
         },
     }
 
@@ -277,11 +278,11 @@ def lstm_file():
 
     json_response = {
         'status_code' : 200,
-        'description' : "Result of Sentiment Analysis using LSTM",
+        'description' : 'File lengkap telah disimpan dalam folder output.',
         'data' : {
             'text' : original[:3],
             'sentiment' : result[:3],
-            'keterangan' : 'File lengkap telah disimpan dalam folder output.'
+            'keterangan' : "Hasil dari Sentiment Analysis menggunakan LSTM"
         },
     }
     response_data = jsonify(json_response)
