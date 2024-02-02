@@ -109,7 +109,7 @@ file = open("data/tokenizer.pickle",'rb')
 tokenizer_from_lstm = pickle.load(file)
 file.close()
 
-model_file_from_lstm = load_model('data/model_lstm.keras')
+model_file_from_lstm = load_model('data/model_lstm.h5')
 
 ##################################################################################
 
