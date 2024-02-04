@@ -10,10 +10,7 @@ import numpy as np
 from tensorflow.keras.preprocessing.text import Tokenizer
 from keras.models import load_model
 from tensorflow.keras.preprocessing.sequence import pad_sequences
-import nltk
-nltk.download('stopwords')
-from nltk.corpus import stopwords
-list_stopwords = set(stopwords.words('indonesian'))
+from cleansing import cleansing_all
 
 class CustomFlaskAppWithEncoder(Flask):
     json_provider_class = LazyJSONEncoder
@@ -49,51 +46,6 @@ tokenizer = Tokenizer(num_words=max_features, split=' ',lower=True)
 
 # Definisikan label untuk sentimen
 sentiment = ['negative', 'neutral', 'positive']
-
-# Definisikan fungsi untuk cleansing
-df_alay = pd.read_csv('new_kamusalay.csv', encoding='ISO-8859-1', header=None)
-df_alay = df_alay.rename(columns={0: 'alay', 1: 'formal'}) 
-
-def data_cleaning (text):
-    clean1 = re.sub ('\\n','', text)
-    clean2 = re.sub ('RT',' ', clean1)
-    clean3 = re.sub ('USER', ' ', clean2)
-    clean4 = re.sub ('(http|https):\/\/s+', ' ', clean3)
-    clean5 = re.sub ('[^0-9a-zA-Z]+', ' ', clean4)
-    clean6 = re.sub ('x[a-z0-9]{2}', ' ', clean5)
-    clean7 = re.sub ("\d+", ' ', clean6)
-    clean8 = re.sub ('  +', '', clean7)
-    clean9 = re.sub ('user', ' ', clean8)
-    return clean9
-
-def case_folding (text):
-    return text.lower()
-
-def alay_normalization(text):
-    res = ''
-    for item in text.split():
-        if item in df_alay['alay'].values:
-            res += df_alay[df_alay['alay'] == item]['formal'].iloc[0]
-        else:
-            res += item
-        res += ' '
-    return res
-
-def stopword_removal(text):
-    resp = ''
-    for item in text.split():
-        if item not in list_stopwords:
-            resp += item
-        resp +=' '
-    clean = re.sub('  +', ' ', resp)
-    return clean
-
-def cleansing(text):
-    text = data_cleaning(text)
-    text = case_folding(text)
-    text = alay_normalization(text)
-    text = stopword_removal(text)
-    return text
 
 ##################################################################################
 # Load feature extraction and model Neural Network
@@ -133,7 +85,7 @@ def hello_world():
 def nn_text():  
     # get input text
     original_text = request.form.get('text')
-    text = [cleansing(original_text)]
+    text = [cleansing_all(original_text)]
 
     # convert text to vector
     feature = feature_file_from_nn.transform(text)
@@ -146,7 +98,7 @@ def nn_text():
         'status_code': 200,
         'description': "Result of Sentiment Analysis Using NN",
         'data': {
-            'text': original_text,
+            'text': text,
             'sentiment': get_sentiment}
                     }
 
@@ -160,7 +112,7 @@ def nn_file():
     file = request.files["upload_file"]
     df = (pd.read_csv(file, encoding="latin-1"))
     df = df.rename(columns={df.columns[0]: 'text'})
-    df['text_clean'] = df.apply(lambda row : cleansing(row['text']), axis = 1)
+    df['text_clean'] = df.apply(lambda row : cleansing_all(row['text']), axis = 1)
     
     result = []
 
@@ -192,14 +144,16 @@ def nn_file():
     conn.close()
 
     json_response = {
-        'status_code' : 200,
-        'description' : 'File lengkap telah disimpan dalam folder output.',
-        'data' : {
-            'text' : original[:3],
-            'sentiment' : result[:3],
-            'keterangan' : "Hasil dari Sentiment Analysis menggunakan NN"
-        },
-    }
+    'status_code': 200,
+    'description': 'File lengkap telah disimpan dalam folder output.',
+    'data': [
+        {'text': original[0],
+        'sentiment': result[0],
+        'keterangan': "Hasil dari Sentiment Analysis menggunakan NN" },
+        {'text': original[1],
+         'sentiment': result[1],},
+        {'text': original[2],
+         'sentiment': result[2],}]}
 
     response_data = jsonify(json_response)
     return response_data
@@ -211,7 +165,7 @@ def nn_file():
 def lstm_text():  
     # get input text and cleansing
     original_text = request.form.get('text')
-    text = [cleansing(original_text)]
+    text = [cleansing_all(original_text)]
 
     # convert text to vector
     feature = tokenizer_from_lstm.texts_to_sequences(text)
@@ -226,7 +180,7 @@ def lstm_text():
         'status_code': 200,
         'description': "Result of Sentiment Analysis Using LSTM",
         'data': {
-            'text': original_text,
+            'text': text,
             'sentiment': get_sentiment
         }
     }
@@ -241,7 +195,7 @@ def lstm_file():
     file = request.files["upload_file"]
     df = (pd.read_csv(file, encoding="latin-1"))
     df = df.rename(columns={df.columns[0]: 'text'})
-    df['text_clean'] = df.apply(lambda row : cleansing(row['text']), axis = 1)
+    df['text_clean'] = df.apply(lambda row : cleansing_all(row['text']), axis = 1)
     
     result = []
 
@@ -277,14 +231,17 @@ def lstm_file():
     conn.close()
 
     json_response = {
-        'status_code' : 200,
-        'description' : 'File lengkap telah disimpan dalam folder output.',
-        'data' : {
-            'text' : original[:3],
-            'sentiment' : result[:3],
-            'keterangan' : "Hasil dari Sentiment Analysis menggunakan LSTM"
-        },
-    }
+    'status_code': 200,
+    'description': 'File lengkap telah disimpan dalam folder output.',
+    'data': [
+        {'text': original[0],
+        'sentiment': result[0],
+        'keterangan': "Hasil dari Sentiment Analysis menggunakan LSTM" },
+        {'text': original[1],
+         'sentiment': result[1],},
+        {'text': original[2],
+         'sentiment': result[2],}]}
+
     response_data = jsonify(json_response)
     return response_data
 
